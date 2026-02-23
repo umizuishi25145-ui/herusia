@@ -1,0 +1,213 @@
+
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>herusia - 健康管理</title>
+
+<style>
+body{
+    font-family:sans-serif;
+    background:#f0f8ff;
+    padding:20px;
+    color:#333;
+}
+.container{
+    max-width:500px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 4px 6px rgba(0,0,0,0.1);
+}
+h1{color:#2ecc71;text-align:center;}
+.input-group{margin-bottom:15px;}
+label{display:block;margin-bottom:5px;font-weight:bold;}
+input,textarea{
+    width:100%;
+    padding:10px;
+    border:1px solid #ddd;
+    border-radius:5px;
+    box-sizing:border-box;
+}
+button{
+    width:100%;
+    padding:12px;
+    background:#2ecc71;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-size:16px;
+}
+button:hover{background:#27ae60;}
+.hidden{display:none;}
+.log-entry{
+    border-bottom:1px solid #eee;
+    padding:10px 0;
+}
+.progress{
+    height:20px;
+    background:#eee;
+    border-radius:10px;
+    overflow:hidden;
+    margin:10px 0;
+}
+.bar{
+    height:100%;
+    background:#2ecc71;
+    width:0%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>herusia</h1>
+
+<!-- 初期設定 -->
+<div id="survey">
+<h3>初期設定</h3>
+
+<div class="input-group">
+<label>身長(cm)</label>
+<input type="number" id="height">
+</div>
+
+<div class="input-group">
+<label>現在体重(kg)</label>
+<input type="number" id="startWeight">
+</div>
+
+<div class="input-group">
+<label>目標体重(kg)</label>
+<input type="number" id="goalWeight">
+</div>
+
+<button onclick="startApp()">開始</button>
+</div>
+
+<!-- メイン -->
+<div id="app" class="hidden">
+
+<h3>今日の記録</h3>
+
+<div class="input-group">
+<label>体重</label>
+<input type="number" id="todayWeight" step="0.1">
+</div>
+
+<div class="input-group">
+<label>食事</label>
+<textarea id="food"></textarea>
+</div>
+
+<button onclick="saveLog()">保存</button>
+
+<h3>進捗</h3>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div id="status"></div>
+
+<hr>
+<h3>履歴</h3>
+<div id="history"></div>
+
+</div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("herusia")) || null;
+
+function startApp(){
+    const h = height.value;
+    const s = startWeight.value;
+    const g = goalWeight.value;
+
+    if(!h || !s || !g){
+        alert("全部入力してください");
+        return;
+    }
+
+    data = {
+        height:h,
+        start:s,
+        goal:g,
+        logs:[]
+    };
+
+    saveStorage();
+    showApp();
+}
+
+function showApp(){
+    survey.classList.add("hidden");
+    app.classList.remove("hidden");
+    render();
+}
+
+function saveLog(){
+    const w = todayWeight.value;
+    const f = food.value;
+
+    if(!w){
+        alert("体重入力してね");
+        return;
+    }
+
+    const now = new Date();
+
+    data.logs.unshift({
+        date:now.toLocaleString(),
+        weight:w,
+        food:f
+    });
+
+    saveStorage();
+    todayWeight.value="";
+    food.value="";
+    render();
+}
+
+function render(){
+
+    //履歴表示
+    history.innerHTML="";
+    data.logs.forEach(log=>{
+        history.innerHTML += `
+        <div class="log-entry">
+        <b>${log.date}</b><br>
+        体重 ${log.weight}kg<br>
+        食事 ${log.food}
+        </div>`;
+    });
+
+    //進捗計算
+    const latest = data.logs[0]?.weight || data.start;
+    const total = data.start - data.goal;
+    const done = data.start - latest;
+    const percent = Math.min(100,Math.max(0,(done/total)*100));
+
+    bar.style.width = percent+"%";
+
+    //BMI
+    const bmi = (latest / ((data.height/100)**2)).toFixed(1);
+
+    status.innerHTML =
+    `現在体重: ${latest}kg<br>
+     BMI: ${bmi}<br>
+     達成率: ${percent.toFixed(1)}%`;
+}
+
+function saveStorage(){
+    localStorage.setItem("herusia",JSON.stringify(data));
+}
+
+//既存データがあれば自動開始
+if(data) showApp();
+</script>
+
+</body>
+</html>
